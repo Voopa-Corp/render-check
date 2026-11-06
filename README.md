@@ -4,6 +4,10 @@
 
 This developer preview runs locally. It uses the calling host’s visual review or its reviewer’s observations. The local preview can read an existing fal video result. The hosted World Engine review is in development.
 
+## Connect to the hosted preview
+
+Use `https://voopa-render-check.onrender.com/mcp` as a Streamable HTTP MCP endpoint. The preview is free and rate limited. The hosting service sleeps after inactivity, so the first request may take about a minute. The hosted service accepts a completed fal result URL and returns frames to the calling agent, which supplies observations to the retry tool. A standalone hosted visual reviewer and paid credits are in development.
+
 ## Run the preview
 
 Requirements are Node.js 22 or later and FFmpeg with ffprobe. Run:

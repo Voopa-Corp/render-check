@@ -1,0 +1,17 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.voopa-corp/render-check",
+  "title": "VOOPA Render Check",
+  "description": "Review an existing fal video and decide whether to edit, retry once, or change approach.",
+  "repository": {
+    "url": "https://github.com/Voopa-Corp/render-check",
+    "source": "github"
+  },
+  "version": "0.2.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://voopa-render-check.onrender.com/mcp"
+    }
+  ]
+}
