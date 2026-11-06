@@ -1,0 +1,31 @@
+name: Publish to the MCP Registry
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/publish-mcp.yml']
+
+jobs:
+  publish:
+    if: github.repository == 'Voopa-Corp/render-check' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Verify the public preview
+        run: |
+          curl --fail --silent --show-error --retry 2 --max-time 80 https://voopa-render-check.onrender.com/health |
+            jq -e '.status == "ok" and .service == "voopa-render-check"'
+      - name: Publish verified metadata
+        run: |
+          curl --fail --silent --show-error --location --output publisher.tar.gz https://github.com/modelcontextprotocol/registry/releases/download/v1.8.8/mcp-publisher_linux_amd64.tar.gz
+          echo '09f1fa70ee146b640584274a1a6b2b8a0310b05d4321fa9224e6df6a016d67f4  publisher.tar.gz' | sha256sum --check
+          tar -xzf publisher.tar.gz mcp-publisher
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish server.json
