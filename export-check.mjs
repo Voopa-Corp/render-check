@@ -3,8 +3,7 @@ import { openIntakeVideo } from './intake-video.mjs';
 import { promisify } from 'node:util';
 
 const probe = promisify(execFile);
-export async function readVideoMetadata(file) {
-  const { path, format } = await openIntakeVideo(file);
+export async function readVideoMetadata({ path, format }) {
   const { stdout } = await probe('ffprobe', [
     '-v', 'error', '-protocol_whitelist', 'file', '-f', format, '-select_streams', 'v',
     '-show_entries', 'stream=width,height:stream_disposition=attached_pic:stream_side_data=rotation:format=duration',
@@ -23,7 +22,7 @@ export async function readVideoMetadata(file) {
 }
 
 export async function checkExport({ file, orientation, maxDurationSeconds }) {
-  const evidence = await readVideoMetadata(file);
+  const evidence = await readVideoMetadata(await openIntakeVideo(file));
   const { orientation: actualOrientation, durationSeconds } = evidence;
   const issues = [];
   if (actualOrientation !== orientation) {

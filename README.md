@@ -2,7 +2,7 @@
 
 **Your video is a signal.** Render Check is a Signal Labs tool that an agent can call after a generated video misses its brief and before anyone pays for another take. It returns timestamped evidence and recommends whether to edit the take, try one specific change, switch approach, or review the evidence again.
 
-This developer preview runs locally. It uses the calling host’s visual review or its reviewer’s observations. The hosted World Engine review and direct handoff from a generation provider are in development.
+This developer preview runs locally. It uses the calling host’s visual review or its reviewer’s observations. The local preview can read an existing fal video result. The hosted World Engine review is in development.
 
 ## Run the preview
 
@@ -16,7 +16,7 @@ npm run mcp:http
 
 The test generates its own one-second clip. The server listens at `http://127.0.0.1:50951/mcp` and accepts only local connections. For a process-based MCP host, launch `node /absolute/path/to/mcp.mjs` instead.
 
-Put an authorized clip into an `intake` folder beside the server. An agent running on the machine can stage a clip it already has. The local preview does not fetch links from the internet.
+Pass a direct HTTPS video URL from an existing fal result as `falVideoUrl`, or pass the filename of an authorized local clip in the `intake` folder as `file`. A fal result is fetched from the supported fal media hosts, sampled, and the temporary clip is removed. This uses no generation credits.
 
 ## Connect a workflow
 
@@ -33,7 +33,7 @@ The test verifies the MCP protocol with an independent client. The hosted provid
 
 > When a paid video take misses the brief, use VOOPA Render Check before proposing another generation. Reuse the existing clip, prompt, and attempt history. Show the timestamp and one actionable recommendation in chat. Hold spending if the evidence is unclear.
 
-Start with `review_completed_render`. Give it the clip, the must-haves, and prior attempts. A compatible process-based host can use model sampling. Over the local HTTP preview the host receives frames and calls `decide_render_retry` with its observations. Text-only hosts can use trusted observations supplied by a reviewer or separate vision component.
+Start with `review_completed_render`. Give it the clip or the `video.url` from the fal result, the must-haves, and prior attempts. A compatible process-based host can use model sampling. Over the local HTTP preview the host receives frames and calls `decide_render_retry` with its observations. Text-only hosts can use trusted observations supplied by a reviewer or separate vision component.
 
 ## What this preview proves
 

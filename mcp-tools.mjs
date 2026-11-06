@@ -23,7 +23,7 @@ export function createRenderMcp({ allowSampling = true, includeDemo = false } = 
 
   server.registerTool('review_completed_render', {
     title: 'Review a generated video before paying to rerender',
-    description: 'Use when a generated video missed its brief, keeps repeating a defect, or the user asks whether to rerender. Compare a clip from the local intake folder with the brief and previous attempts. Returns timestamped evidence and whether to edit, try one targeted change, switch approach, or pause for review. Uses host vision when supported.',
+    description: 'Use when a generated video missed its brief, keeps repeating a defect, or the user asks whether to rerender. Compare an existing fal result URL or a local intake clip with the brief and previous attempts. Returns timestamped evidence and whether to edit, try one targeted change, switch approach, or pause for review. Uses host vision when supported.',
     inputSchema: agentReviewInput,
     annotations: { ...readOnly, openWorldHint: true },
   }, async (input) => {
@@ -33,7 +33,7 @@ export function createRenderMcp({ allowSampling = true, includeDemo = false } = 
         ? (request) => server.server.createMessage(request, { timeout: 25_000 })
         : undefined);
     } catch {
-      return { isError: true, content: [{ type: 'text', text: 'Could not read the completed clip or review details. Check the local intake filename and prior attempt IDs.' }] };
+      return { isError: true, content: [{ type: 'text', text: 'Could not read the completed clip or review details. Check the fal result URL or local filename and the prior attempt IDs.' }] };
     }
   });
 

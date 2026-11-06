@@ -5,7 +5,10 @@ import { openIntakeVideo } from './intake-video.mjs';
 const run = promisify(execFile);
 
 export async function extractReviewFrames(file, timestamps) {
-  const { path, format } = await openIntakeVideo(file);
+  return extractFrames(await openIntakeVideo(file), timestamps);
+}
+
+export async function extractFrames({ path, format }, timestamps) {
   const frames = [];
   for (const seconds of timestamps) {
     const { stdout } = await run('ffmpeg', [

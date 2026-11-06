@@ -1,16 +1,21 @@
 import { z } from 'zod';
 import { readVideoMetadata } from './export-check.mjs';
-import { extractReviewFrames } from './frame-review.mjs';
+import { extractFrames } from './frame-review.mjs';
+import { openIntakeVideo } from './intake-video.mjs';
+import { withFalVideo } from './fal-video.mjs';
 import { decideRetry, retryInput, retryInputBase } from './retry-decision.mjs';
 
 const originalRequirement = retryInputBase.shape.requirements.element;
 const requirementIdentity = originalRequirement.pick({ id: true, description: true });
 
 export const agentReviewInput = retryInputBase.omit({ requirements: true }).extend({
-  file: z.string().max(200),
+  file: z.string().min(1).max(200).optional(),
+  falVideoUrl: z.url().max(2048).optional(),
   requirements: z.array(requirementIdentity).min(1).max(8),
   timestamps: z.array(z.number().min(0).max(3600)).min(1).max(6).optional(),
   editableAssets: z.array(z.string().trim().min(1).max(200)).max(8).optional(),
+}).refine((input) => Boolean(input.file) !== Boolean(input.falVideoUrl), {
+  message: 'Supply either a local filename or a fal result URL.',
 });
 
 const systemPrompt = `You are reviewing an already rendered clip for VOOPA Render Check.
@@ -25,11 +30,20 @@ You may also include alternative, a short suggestion for another production meth
 export async function reviewCompletedRender(input, sample) {
   const base = retryInput.parse(input);
   const assets = input.editableAssets ?? [];
-  const { durationSeconds } = await readVideoMetadata(input.file);
-  const timestamps = input.timestamps ?? (durationSeconds > 0
+  const inspect = (video) => collectFrames(video, input.timestamps);
+  const sampled = input.falVideoUrl ? await withFalVideo(input.falVideoUrl, inspect) : await inspect(await openIntakeVideo(input.file));
+  return reviewSampledFrames(input, base, assets, sampled, sample);
+}
+
+async function collectFrames(video, requestedTimes) {
+  const { durationSeconds } = await readVideoMetadata(video);
+  const timestamps = requestedTimes ?? (durationSeconds > 0
     ? [0, .15, .32, .49, .68, .87].map((fraction) => Math.min(3600, Math.round(durationSeconds * fraction * 1000) / 1000))
     : [0]);
-  const sampled = (await extractReviewFrames(input.file, [...new Set(timestamps)])).filter((frame) => frame.image);
+  return (await extractFrames(video, [...new Set(timestamps)])).filter((frame) => frame.image);
+}
+
+async function reviewSampledFrames(input, base, assets, sampled, sample) {
   const availableTimes = sampled.map((frame) => frame.requestedSeconds);
   const frameContent = sampled.flatMap((frame) => [
     { type: 'text', text: `Frame at requested time ${frame.requestedSeconds} s.` },
