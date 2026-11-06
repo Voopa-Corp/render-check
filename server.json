@@ -1,6 +1,6 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.voopa-corp/render-check",
+  "name": "io.github.Voopa-Corp/render-check",
   "title": "VOOPA Render Check",
   "description": "Review an existing fal video and decide whether to edit, retry once, or change approach.",
   "repository": {
