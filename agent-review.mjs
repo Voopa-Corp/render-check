@@ -8,12 +8,15 @@ import { decideRetry, retryInput, retryInputBase } from './retry-decision.mjs';
 const originalRequirement = retryInputBase.shape.requirements.element;
 const requirementIdentity = originalRequirement.pick({ id: true, description: true });
 
-export const agentReviewInput = retryInputBase.omit({ requirements: true }).extend({
-  file: z.string().min(1).max(200).optional(),
-  falVideoUrl: z.url().max(2048).optional(),
+const reviewContext = retryInputBase.omit({ requirements: true }).extend({
   requirements: z.array(requirementIdentity).min(1).max(8),
   timestamps: z.array(z.number().min(0).max(3600)).min(1).max(6).optional(),
   editableAssets: z.array(z.string().trim().min(1).max(200)).max(8).optional(),
+});
+export const hostedReviewInput = reviewContext.extend({ falVideoUrl: z.url().max(2048) });
+export const agentReviewInput = reviewContext.extend({
+  file: z.string().min(1).max(200).optional(),
+  falVideoUrl: z.url().max(2048).optional(),
 }).refine((input) => Boolean(input.file) !== Boolean(input.falVideoUrl), {
   message: 'Supply either a local filename or a fal result URL.',
 });

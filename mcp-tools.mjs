@@ -4,9 +4,9 @@ import { review } from './review.mjs';
 import { checkExport } from './export-check.mjs';
 import { extractReviewFrames } from './frame-review.mjs';
 import { decideRetry, retryInput } from './retry-decision.mjs';
-import { agentReviewInput, reviewCompletedRender } from './agent-review.mjs';
+import { agentReviewInput, hostedReviewInput, reviewCompletedRender } from './agent-review.mjs';
 
-export function createRenderMcp({ allowSampling = true, includeDemo = false } = {}) {
+export function createRenderMcp({ allowSampling = true, includeDemo = false, hosted = false } = {}) {
   const server = new McpServer({
     name: 'voopa-render-check',
     title: 'VOOPA Render Check',
@@ -24,7 +24,7 @@ export function createRenderMcp({ allowSampling = true, includeDemo = false } = 
   server.registerTool('review_completed_render', {
     title: 'Review a generated video before paying to rerender',
     description: 'Use when a generated video missed its brief, keeps repeating a defect, or the user asks whether to rerender. Compare an existing fal result URL or a local intake clip with the brief and previous attempts. Returns timestamped evidence and whether to edit, try one targeted change, switch approach, or pause for review. Uses host vision when supported.',
-    inputSchema: agentReviewInput,
+    inputSchema: hosted ? hostedReviewInput : agentReviewInput,
     annotations: { ...readOnly, openWorldHint: true },
   }, async (input) => {
     try {
@@ -44,7 +44,7 @@ export function createRenderMcp({ allowSampling = true, includeDemo = false } = 
     annotations: readOnly,
   }, async ({ take }) => toolResult(await review(take)));
 
-  server.registerTool('check_video_export', {
+  if (!hosted) server.registerTool('check_video_export', {
     title: 'Check a video export',
     description: 'Check orientation and duration of a local video against its delivery requirements. Use the filename from the Render Check intake folder. Returns measured evidence and an editing or review recommendation before a paid retry.',
     inputSchema: {
@@ -64,7 +64,7 @@ export function createRenderMcp({ allowSampling = true, includeDemo = false } = 
     }
   });
 
-  server.registerTool('inspect_render_frames', {
+  if (!hosted) server.registerTool('inspect_render_frames', {
     title: 'Inspect frames from a completed render',
     description: 'Get stills at up to six requested times from an MP4, MOV or WebM in the local intake folder. Use nearby frames to look for motion and mark unclear if sampling cannot resolve it. Review the images against the brief before calling decide_render_retry.',
     inputSchema: {

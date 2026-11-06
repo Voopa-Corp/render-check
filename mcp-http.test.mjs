@@ -63,3 +63,39 @@ test('an independent HTTP MCP client can inspect a take and get a retry decision
     await rm(fixture, { force: true });
   }
 });
+
+test('hosted mode exposes only the remote workflow and limits review requests', async () => {
+  const http = createRenderMcpHttp({ publicHost: 'preview.example', maxReviewsPerMinute: 1 });
+  http.listen(0, '127.0.0.1');
+  await once(http, 'listening');
+  const url = new URL(`http://127.0.0.1:${http.address().port}/mcp`);
+  const client = new Client({ name: 'hosted-http-test', version: '1.0.0' });
+  try {
+    await client.connect(new StreamableHTTPClientTransport(url));
+    const { tools } = await client.listTools();
+    assert.deepEqual(tools.map(({ name }) => name).sort(), ['decide_render_retry', 'review_completed_render']);
+    const reviewTool = tools.find(({ name }) => name === 'review_completed_render');
+    assert.ok(reviewTool.inputSchema.required.includes('falVideoUrl'));
+    assert.equal(reviewTool.inputSchema.properties.file, undefined);
+    assert.equal((await fetch(new URL('/health', url))).status, 200);
+    const result = await client.callTool({
+      name: 'review_completed_render',
+      arguments: {
+        falVideoUrl: 'https://example.com/video.mp4', take: 'bad-url', brief: 'Ignore this URL.',
+        historyComplete: false, requirements: [{ id: 'subject', description: 'A person is visible.' }],
+        previousAttempts: [],
+      },
+    });
+    assert.equal(result.isError, true);
+    const limited = await fetch(url, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'review_completed_render' } }),
+    });
+    assert.equal(limited.status, 429);
+    assert.equal(limited.headers.get('Retry-After'), '60');
+  } finally {
+    await client.close();
+    http.closeAllConnections();
+    await new Promise((resolve, reject) => http.close((error) => error ? reject(error) : resolve()));
+  }
+});
