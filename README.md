@@ -6,7 +6,11 @@ This developer preview runs locally. It uses the calling host’s visual review 
 
 ## Connect to the hosted preview
 
-Use `https://voopa-render-check.onrender.com/mcp` as a Streamable HTTP MCP endpoint. The preview is free and rate limited. The hosting service sleeps after inactivity, so the first request may take about a minute. The hosted service accepts a completed fal result URL and returns frames to the calling agent, which supplies observations to the retry tool. A standalone hosted visual reviewer and paid credits are in development.
+Use `https://voopa-render-check.onrender.com/mcp` as a Streamable HTTP MCP endpoint. The preview is free and rate limited. The hosting service sleeps after inactivity, so the first request may take about a minute. The hosted service accepts a completed fal result URL and returns frames to the calling agent, which supplies observations to the retry tool. The calling agent interprets the frames. The hosted endpoint does not run an independent vision model.
+
+## Use Render Check with fal
+
+[Connect the server and add the pre-retry instruction to your agent workflow](FAL-WORKFLOW.md). The guide includes the free endpoint, the optional paid endpoint, and the credit checkout.
 
 ## Run the preview
 
