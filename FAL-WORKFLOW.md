@@ -18,3 +18,10 @@ For paid access, the account owner can buy 50 review credits for US$5 at [Render
 4. On the paid endpoint, supply a stable `reviewId` per decision and reuse it after transport failures. A completed decision uses one credit. The agent never purchases credits or starts a generation on its own.
 
 For example, if three blue blocks become six, or they land outside the grid, check those as separate requirements. A take can pass the count check and still fail placement. If exact placement has failed repeatedly, compare a controlled animation or compositing pass with the cost of another speculative generation.
+
+
+## Run the same decision in n8n
+
+[Download the workflow JSON](https://raw.githubusercontent.com/Voopa-Corp/render-check/main/render-check-n8n.json). Import it in n8n with **Import from File**, then run **Run puppy example**. It sends the demo observations to the public MCP endpoint and should return `edit_first`.
+
+To reuse it in a video pipeline, call it as a sub-workflow after a reviewer or vision-capable agent has inspected the completed clip. Pass the same fields as the demo node, replacing the observations with evidence from your own take. Route the result to a person for approval before any new generation. The n8n template runs the decision step. Use the MCP frame-review tool above when your agent needs timestamped frames.

@@ -1,0 +1,158 @@
+{
+  "name": "VOOPA Render Check — Review before rerendering",
+  "nodes": [
+    {
+      "name": "Run puppy example",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "589dac7b-4d8b-4a17-8f7f-e3cf5724b098",
+      "parameters": {}
+    },
+    {
+      "name": "Use supplied demo observations",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        250,
+        0
+      ],
+      "id": "ba25c667-bc28-440d-997b-5b2a1d2c3eec",
+      "parameters": {
+        "jsCode": "return [{ json: {\n  \"take\": \"puppy-treat-demo\",\n  \"brief\": \"A puppy and its treat on a cream rug. Keep shoes out of the shot.\",\n  \"historyComplete\": false,\n  \"previousAttempts\": [],\n  \"requirements\": [\n    {\n      \"id\": \"subject\",\n      \"description\": \"The puppy and treat are visible.\",\n      \"observation\": {\n        \"status\": \"pass\",\n        \"fromSeconds\": 0.5,\n        \"detail\": \"The puppy and treat are both visible.\"\n      }\n    },\n    {\n      \"id\": \"footwear\",\n      \"description\": \"No shoe is visible.\",\n      \"observation\": {\n        \"status\": \"fail\",\n        \"fromSeconds\": 0.5,\n        \"toSeconds\": 3,\n        \"detail\": \"A torn sneaker is visible in the lower-right corner at 0.5, 2, and 3 seconds.\"\n      },\n      \"edit\": {\n        \"action\": \"Mask the sneaker and patch the corner, then preview the edit.\",\n        \"availableAsset\": \"Existing shot with adjacent rug and floor texture.\",\n        \"reason\": \"The shoe is separate from the puppy and treat in the sampled frames.\"\n      }\n    }\n  ]\n} }];"
+      }
+    },
+    {
+      "name": "Call from a video workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        250,
+        210
+      ],
+      "id": "b1841349-d72a-4e84-a8d8-bad668080f70",
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "name": "Prepare the retry check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        510,
+        100
+      ],
+      "id": "9a921c3b-3d33-4064-8f14-5ce424d4191e",
+      "parameters": {
+        "jsCode": "return $input.all().map(({json}) => {\n  const { take, brief, historyComplete = false, previousAttempts = [], requirements } = json;\n  if (typeof take !== 'string' || typeof brief !== 'string' || !Array.isArray(requirements) || !requirements.length) {\n    throw new Error('Provide take, brief and at least one requirement with reviewer observations.');\n  }\n  return { json: { jsonrpc: '2.0', id: 1, method: 'tools/call', params: {\n    name: 'decide_render_retry',\n    arguments: { take, brief, historyComplete, previousAttempts, requirements }\n  } } };\n});"
+      }
+    },
+    {
+      "name": "Ask VOOPA Render Check",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        760,
+        100
+      ],
+      "id": "ff410b21-4577-419d-a29b-d698293d48e2",
+      "parameters": {
+        "method": "POST",
+        "url": "https://voopa-render-check.onrender.com/mcp",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json, text/event-stream"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 90000
+        }
+      }
+    },
+    {
+      "name": "Return decision for approval",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1010,
+        100
+      ],
+      "id": "d11aa9b5-a2ed-4b4e-8b96-6486400f66b5",
+      "parameters": {
+        "jsCode": "return $input.all().map(({json}) => {\n  const result = json.result;\n  if (json.error || result?.isError || !result?.structuredContent?.decision) {\n    const detail = json.error?.message ?? result?.content?.find(item => item.type === 'text')?.text;\n    throw new Error(detail ?? 'Render Check did not return a decision.');\n  }\n  return { json: { ...result.structuredContent, spendApproved: false } };\n});"
+      }
+    }
+  ],
+  "connections": {
+    "Run puppy example": {
+      "main": [
+        [
+          {
+            "node": "Use supplied demo observations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Use supplied demo observations": {
+      "main": [
+        [
+          {
+            "node": "Prepare the retry check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call from a video workflow": {
+      "main": [
+        [
+          {
+            "node": "Prepare the retry check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare the retry check": {
+      "main": [
+        [
+          {
+            "node": "Ask VOOPA Render Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask VOOPA Render Check": {
+      "main": [
+        [
+          {
+            "node": "Return decision for approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}
