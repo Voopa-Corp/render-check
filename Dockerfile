@@ -5,5 +5,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts
 COPY *.mjs ./
+COPY credits.html credits.js ./
+
 USER node
 CMD ["node", "mcp-serve.mjs"]

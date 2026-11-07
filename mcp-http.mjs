@@ -7,7 +7,7 @@ function rpcError(res, status, message) {
   res.end(JSON.stringify({ jsonrpc: '2.0', error: { code: -32000, message }, id: null }));
 }
 
-export function createRenderMcpHttp({ publicHost, maxReviewsPerMinute = 6, maxReviewsPerDay = 24 } = {}) {
+export function createRenderMcpHttp({ publicHost, maxReviewsPerMinute = 6, maxReviewsPerDay = 24, billing, checkoutUrl } = {}) {
   const hosted = Boolean(publicHost);
   let activeReviews = 0;
   let recentReviews = [];
@@ -23,8 +23,26 @@ export function createRenderMcpHttp({ publicHost, maxReviewsPerMinute = 6, maxRe
       res.writeHead(200, { 'Content-Type': 'application/json' }).end('{"status":"ok","service":"voopa-render-check"}');
       return;
     }
-    if (req.url !== '/mcp') return rpcError(res, 404, 'Use /mcp.');
-    const server = createRenderMcp({ allowSampling: false, hosted });
+    try {
+      if (billing && await billing.handle(req, res)) return;
+    } catch {
+      return rpcError(res, 503, 'Billing is temporarily unavailable.');
+    }
+    const paid = Boolean(billing && req.url === '/mcp/paid');
+    if (!paid && req.url !== '/mcp') return rpcError(res, 404, 'Use /mcp.');
+    let paidAccount;
+    try {
+      if (paid) paidAccount = await billing.authenticate(req);
+    } catch {
+      return rpcError(res, 503, 'Billing is temporarily unavailable.');
+    }
+    if (paid && !paidAccount) {
+      res.setHeader('WWW-Authenticate', 'Bearer');
+      return rpcError(res, 401, 'A valid Render Check account key is required.');
+    }
+    const server = createRenderMcp({
+      allowSampling: false, hosted: hosted || paid, paidAccount, creditLedger: billing?.ledger, checkoutUrl,
+    });
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
       enableJsonResponse: true,
@@ -33,7 +51,7 @@ export function createRenderMcpHttp({ publicHost, maxReviewsPerMinute = 6, maxRe
     let reserved = false;
     try {
       let body;
-      if (hosted && req.method === 'POST') {
+      if ((hosted || paid) && req.method === 'POST') {
         if (req.headers['content-type']?.split(';')[0] !== 'application/json') {
           return rpcError(res, 415, 'Use application/json.');
         }
@@ -58,15 +76,15 @@ export function createRenderMcpHttp({ publicHost, maxReviewsPerMinute = 6, maxRe
         if (body.method === 'tools/call' && body.params?.name === 'review_completed_render') {
           const now = Date.now();
           recentReviews = recentReviews.filter((time) => time > now - 86_400_000);
-          if (recentReviews.length >= maxReviewsPerDay) {
+          if (!paid && recentReviews.length >= maxReviewsPerDay) {
             res.setHeader('Retry-After', String(Math.ceil((recentReviews[0] + 86_400_000 - now) / 1000)));
             return rpcError(res, 429, 'The free preview has reached its daily review limit.');
           }
-          if (activeReviews >= 2 || recentReviews.filter((time) => time > now - 60_000).length >= maxReviewsPerMinute) {
+          if (activeReviews >= 2 || (!paid && recentReviews.filter((time) => time > now - 60_000).length >= maxReviewsPerMinute)) {
             res.setHeader('Retry-After', '60');
             return rpcError(res, 429, 'The free preview is busy. Try again in a minute.');
           }
-          recentReviews.push(now);
+          if (!paid) recentReviews.push(now);
           activeReviews++;
           reserved = true;
         }

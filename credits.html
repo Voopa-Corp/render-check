@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VOOPA Render Check Credits</title>
+<style>
+body { margin: 3rem auto; width:min(92%,42rem); font: 1rem/1.55 system-ui,sans-serif; background:#f7f5ed; color:#19362b; }
+h1 { font: 3rem/1 Georgia,serif; } section { border:1px solid #d3d9ca; border-radius:12px; padding:1.4rem; background:#fff; }
+button,input { font:inherit; padding:.6rem .8rem; border-radius:6px; border:1px solid #8d9d90; }
+button { background:#19362b; color:white; cursor:pointer; margin:.25rem; } input { width:min(90%,25rem); }
+code { display:block; overflow-wrap:anywhere; color:#3a5548; } [hidden] { display:none; }
+</style>
+<script defer src="/credits.js"></script>
+<header>VOOPA · Signal Labs</header>
+<h1>Render Check credits</h1>
+<p>Before paying for another render, check whether it’s worth retrying.</p>
+<section>
+  <p id="pack"></p>
+  <p id="mode"></p>
+  <div id="setup">
+    <button id="create" type="button">Create a review key</button>
+    <form id="restore">
+      <label for="restore-key">Already have a key?</label>
+      <input id="restore-key" name="key" type="password" autocomplete="off" required>
+      <button type="submit">Connect</button>
+    </form>
+  </div>
+  <div id="account" hidden>
+    <p><strong id="balance"></strong> review credits available</p>
+    <details><summary>Connect an agent</summary>
+      <p>Use this private key as the Bearer token for the paid MCP address below. Save a copy somewhere safe.</p>
+      <code id="key"></code><code id="endpoint"></code>
+    </details>
+    <button id="buy" type="button" disabled>Continue to Stripe Checkout</button>
+    <button id="refresh" type="button">Refresh balance</button>
+  </div>
+  <p id="message" role="status"></p>
+</section>
+</html>

@@ -6,7 +6,7 @@ import { extractReviewFrames } from './frame-review.mjs';
 import { decideRetry, retryInput } from './retry-decision.mjs';
 import { agentReviewInput, hostedReviewInput, reviewCompletedRender } from './agent-review.mjs';
 
-export function createRenderMcp({ allowSampling = true, includeDemo = false, hosted = false } = {}) {
+export function createRenderMcp({ allowSampling = true, includeDemo = false, hosted = false, paidAccount, creditLedger, checkoutUrl } = {}) {
   const server = new McpServer({
     name: 'voopa-render-check',
     title: 'VOOPA Render Check',
@@ -28,6 +28,9 @@ export function createRenderMcp({ allowSampling = true, includeDemo = false, hos
     annotations: { ...readOnly, openWorldHint: true },
   }, async (input) => {
     try {
+      if (paidAccount && paidAccount.balance <= 0) {
+        return toolResult({ decision: 'credit_required', checkoutUrl, spendApproved: false });
+      }
       const canSample = allowSampling && server.server.getClientCapabilities()?.sampling !== undefined;
       return await reviewCompletedRender(input, canSample
         ? (request) => server.server.createMessage(request, { timeout: 25_000 })
@@ -95,9 +98,29 @@ export function createRenderMcp({ allowSampling = true, includeDemo = false, hos
   server.registerTool('decide_render_retry', {
     title: 'Decide what to do before another render',
     description: 'Use after inspecting a completed render. Supply one observation per requirement, past attempts in chronological order, and candidate fixes grounded in available assets or a specific untried change. Returns keep, edit first, propose one retry, change approach, or review. This tool never authorizes spend.',
-    inputSchema: retryInput,
+    inputSchema: paidAccount
+      ? retryInput.safeExtend({ reviewId: z.string().min(8).max(100).regex(/^[\w-]+$/) })
+      : retryInput,
+    annotations: paidAccount ? { ...readOnly, readOnlyHint: false } : readOnly,
+  }, async (input) => {
+    const { reviewId, ...details } = input;
+    const report = decideRetry(details);
+    if (!paidAccount || report.decision === 'review') return toolResult(report);
+    const usage = await creditLedger.useReview(paidAccount.id, reviewId, details);
+    if (usage.status === 'conflict') {
+      return { isError: true, content: [{ type: 'text', text: 'This review ID was already used for different details.' }] };
+    }
+    if (usage.status === 'insufficient') {
+      return toolResult({ decision: 'credit_required', checkoutUrl, spendApproved: false });
+    }
+    return toolResult({ ...report, creditsUsed: usage.status === 'charged' ? 1 : 0, balance: usage.balance });
+  });
+
+  if (paidAccount) server.registerTool('get_review_credit_balance', {
+    title: 'Check the Render Check credit balance',
+    description: 'Read the connected account balance and checkout page. Ask the account owner before any purchase.',
     annotations: readOnly,
-  }, (input) => toolResult(decideRetry(input)));
+  }, () => toolResult({ balance: paidAccount.balance, checkoutUrl }));
 
   return server;
 }
