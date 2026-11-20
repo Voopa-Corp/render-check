@@ -67,5 +67,5 @@ const observations = [/* { id, observation, optional edit or retry } */];
 const decision = await decideMeteredVideoReview({ review, observations, key });
 ```
 
-Use the exact sampled timestamps and only list assets actually available. The adapter handles existing fal results or direct HTTPS video URLs. It never requests a new render. The earlier `fal-workflow.mjs` adapter remains for the free preview and legacy paid endpoint, not `/mcp/usage`.
+Use the exact sampled timestamps and only list assets actually available. The adapter handles existing fal results or direct HTTPS video URLs. It never requests a new render.
 
