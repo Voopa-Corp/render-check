@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "render-check": {
+      "url": "https://voopa-render-check.onrender.com/mcp"
+    }
+  }
+}

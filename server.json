@@ -1,0 +1,17 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.Voopa-Corp/render-check",
+  "title": "VOOPA Render Check",
+  "description": "Check AI video and audio before rerendering. Supports fal, Higgsfield, Runway and Replicate.",
+  "repository": {
+    "url": "https://github.com/Voopa-Corp/render-check",
+    "source": "github"
+  },
+  "version": "0.3.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://voopa-render-check.onrender.com/mcp"
+    }
+  ]
+}

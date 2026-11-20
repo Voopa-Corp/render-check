@@ -1,0 +1,159 @@
+{
+  "name": "VOOPA Render Check — Repeated-shot review",
+  "nodes": [
+    {
+      "id": "27e6b659-f55f-466b-b529-17a413dc8a2f",
+      "name": "Try the demo",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "59452315-ed44-4041-84e8-6293614b3a7d",
+      "name": "Demo clip",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "jsCode": "return [{json:{renderVideoUrl:\"https://raw.githubusercontent.com/Voopa-Corp/render-check/main/repeated-shot-demo.mp4\"}}];"
+      }
+    },
+    {
+      "id": "7c462db5-57cc-45fb-9b27-1e2c2dc74a9b",
+      "name": "From an existing workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        200
+      ],
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "39f9dd96-818c-4983-948b-a5759f4e1fc9",
+      "name": "Prepare scan",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        100
+      ],
+      "parameters": {
+        "jsCode": "return $input.all().map(({json}) => {\n  const { renderVideoUrl, fromSeconds, durationSeconds } = json;\n  if (typeof renderVideoUrl !== 'string' || !renderVideoUrl.startsWith('https://')) throw new Error('Provide a direct public HTTPS video URL.');\n  const args = { renderVideoUrl };\n  if (fromSeconds !== undefined) args.fromSeconds = fromSeconds;\n  if (durationSeconds !== undefined) args.durationSeconds = durationSeconds;\n  return { json: { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'scan_repeated_shots', arguments: args } } };\n});"
+      }
+    },
+    {
+      "id": "ea9d7977-075d-48a8-a434-1dff590868da",
+      "name": "Scan for repeats",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        100
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://voopa-render-check.onrender.com/mcp",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json, text/event-stream"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 90000
+        }
+      }
+    },
+    {
+      "id": "c346292d-1230-4211-a243-3617d7b84532",
+      "name": "Return candidates for review",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        100
+      ],
+      "parameters": {
+        "jsCode": "return $input.all().map(({json}) => {\n  const result = json.result;\n  if (json.error || result?.isError || result?.structuredContent?.decision !== 'review') {\n    throw new Error(json.error?.message ?? result?.content?.find(x => x.type === 'text')?.text ?? 'No review result returned');\n  }\n  return {json: {...result.structuredContent, spendApproved: false}};\n});"
+      }
+    }
+  ],
+  "connections": {
+    "Try the demo": {
+      "main": [
+        [
+          {
+            "node": "Demo clip",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Demo clip": {
+      "main": [
+        [
+          {
+            "node": "Prepare scan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "From an existing workflow": {
+      "main": [
+        [
+          {
+            "node": "Prepare scan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare scan": {
+      "main": [
+        [
+          {
+            "node": "Scan for repeats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scan for repeats": {
+      "main": [
+        [
+          {
+            "node": "Return candidates for review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}
