@@ -1,0 +1,11 @@
+[project]
+name = "voopa-render-check"
+description = "Review completed images and videos before another render"
+version = "0.1.1"
+dependencies = ["certifi"]
+requires-python = ">=3.10"
+[project.urls]
+Repository = "https://github.com/Voopa-Corp/render-check"
+[tool.comfy]
+PublisherId = "voopacorp"
+DisplayName = "VOOPA Render Check"
